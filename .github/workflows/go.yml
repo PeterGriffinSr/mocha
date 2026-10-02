@@ -28,6 +28,18 @@ jobs:
       with:
         go-version-file: 'go.mod'
 
+    - name: Set up Java
+      uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: '21'
+
+    - name: Install ANTLR tool
+      run: pip install antlr4-tools
+
+    - name: Generate parser
+      run: go generate ./...
+
     - name: Build
       run: go build -v ./...
 
@@ -44,5 +56,17 @@ jobs:
       with: 
         go-version-file: 'go.mod' 
         
+    - name: Set up Java
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: '21'
+
+    - name: Install ANTLR tool
+      run: pip install antlr4-tools
+
+    - name: Generate parser
+      run: go generate ./...
+
     - name: Lint 
       uses: golangci/golangci-lint-action@v9
