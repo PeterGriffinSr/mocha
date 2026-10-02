@@ -1,0 +1,33 @@
+struct Point {
+    x: f32,
+    y: f32,
+}
+
+function add(a i32, b i32) i32 {~
+    return a + b
+}
+
+function sub(a i32, b i32) i32 {
+    return a - b
+}
+
+function newPoint(x f32, y f32) Point {
+    return Point{
+        x: x,
+        y: y,
+    }
+}
+
+function toDistance(p1 Point, p2 Point) f32 {
+    let dx: f32 = p2.x - p1.x
+    let dy: f32 = p2.y - p1.y
+    return sqrt(dx * dy + dy * dy)
+}
+
+function main() {
+    let point1: Point = newPoint(5.0, 2.0)
+    let point2: Point = newPoint(2.0, 5.0)
+    let distance: f32 = toDistance(point1, point2)
+    
+    return 0
+}

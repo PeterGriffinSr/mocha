@@ -1,0 +1,4 @@
+.antlr/
+internal/pkg/mochalib/parser/mocha_*.go
+internal/pkg/mochalib/parser/Mocha*.interp
+internal/pkg/mochalib/parser/Mocha*.tokens

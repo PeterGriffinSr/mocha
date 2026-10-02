@@ -76,6 +76,14 @@ func (source Source) PositionOf(offset int) Position {
 	}
 }
 
+func (source Source) OffsetOf(line, column int) int {
+	if line < 1 || line > len(source.lineStarts) {
+		return source.Len()
+	}
+
+	return clamp(source.lineStarts[line-1]+column, 0, source.Len())
+}
+
 func (source Source) Line(lineNum int) []rune {
 	if lineNum < 1 || lineNum > len(source.lineStarts) {
 		return nil
