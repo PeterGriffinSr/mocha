@@ -39,6 +39,8 @@ jobs:
 
     - name: Generate parser
       run: go generate ./...
+      env:
+          ANTLR4_TOOLS_ANTLR_VERSION: '4.13.2'
 
     - name: Build
       run: go build -v ./...
@@ -67,6 +69,8 @@ jobs:
 
     - name: Generate parser
       run: go generate ./...
+      env:
+          ANTLR4_TOOLS_ANTLR_VERSION: '4.13.2'
 
     - name: Lint 
       uses: golangci/golangci-lint-action@v9
