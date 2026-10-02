@@ -15,14 +15,15 @@ var (
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the Mocha version",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintf(
+	RunE: func(cmd *cobra.Command, args []string) error {
+		_, err := fmt.Fprintf(
 			cmd.OutOrStdout(),
 			"mocha %s\ncommit: %s\nbuilt: %s\n",
 			version,
 			commit,
 			buildDate,
 		)
+		return err
 	},
 }
 
