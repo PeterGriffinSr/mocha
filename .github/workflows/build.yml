@@ -34,17 +34,17 @@ jobs:
       - name: Test
         run: opam exec -- dune runtest
 
-    lint-fmt:
-      runs-on: ubuntu-latest
+  lint-fmt:
+    runs-on: ubuntu-latest
       
-      steps:
-        - name: Checkout tree
-          uses: actions/checkout@v7
+    steps:
+      - name: Checkout tree
+        uses: actions/checkout@v7
 
-        - name: Set-up OCaml
-          uses: ocaml/setup-ocaml@v3
-          with:
-            ocaml-compiler: 5
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
 
-        - name: Lint
-          uses: ocaml/setup-ocaml/lint-fmt@v3
+      - name: Lint
+        uses: ocaml/setup-ocaml/lint-fmt@v3
