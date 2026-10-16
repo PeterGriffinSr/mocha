@@ -1,0 +1,50 @@
+name: Builds, tests & co
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout tree
+        uses: actions/checkout@v7
+
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+
+      - name: Install dependencies
+        run: opam install . --deps-only --with-test
+
+      - name: Build
+        run: opam exec -- dune build
+
+      - name: Test
+        run: opam exec -- dune runtest
+
+    lint-fmt:
+      runs-on: ubuntu-latest
+      
+      steps:
+        - name: Checkout tree
+          uses: actions/checkout@v7
+
+        - name: Set-up OCaml
+          uses: ocaml/setup-ocaml@v3
+          with:
+            ocaml-compiler: 5
+
+        - name: Lint
+          uses: ocaml/setup-ocaml/lint-fmt@v3
