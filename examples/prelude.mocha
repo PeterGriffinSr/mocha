@@ -1,361 +1,125 @@
-(defmacro define (target & body)
-  (((atom? target)
-    (lambda ()
-      (uncons body
-        (lambda (expr more)
-          (cons 'defmacro
-            (cons target
-              (cons '()
-                (cons (cons 'quote (cons expr '())) '())))))))
-    (lambda ()
-      (uncons target
-        (lambda (name params)
-          (cons 'defmacro
-            (cons name
-              (cons '()
-                (cons (cons 'quote
-                        (cons (cons 'lambda (cons params body)) '()))
-                      '()))))))))))
-
-(define (car p) (uncons p (lambda (a d) a)))
-(define (cdr p) (uncons p (lambda (a d) d)))
-(define (caar x) (car (car x)))
-(define (cadr x) (car (cdr x)))
-(define (cdar x) (cdr (car x)))
-(define (cddr x) (cdr (cdr x)))
-(define (caddr x) (car (cddr x)))
-(define (cdddr x) (cdr (cddr x)))
-(define (cadddr x) (car (cdddr x)))
-(define (cddddr x) (cdr (cdddr x)))
-(define (caadr x) (car (cadr x)))
-(define (cdadr x) (cdr (cadr x)))
-
-(define true (lambda (t e) t))
-(define false (lambda (t e) e))
-(define nil '())
-
-(define (%if c t e) ((c t e)))
-
-(define (neg x) (- 0 x))
-(define (%add a b) (- a (neg b)))
-(define (inc n) (%add n 1))
-(define (dec n) (- n 1))
-
-(define (%sign-search d i)
-  (%if (eq? d i)
-       (lambda () true)
-       (lambda ()
-         (%if (eq? d (neg i))
-              (lambda () false)
-              (lambda () (%sign-search d (inc i)))))))
-
-(define (< a b)
-  (%if (eq? a b)
-       (lambda () false)
-       (lambda () (%sign-search (- b a) 1))))
-
-(define (not x) (x false true))
-(define (null? x) (eq? x '()))
-(define (pair? x) (not (atom? x)))
-(define (zero? n) (eq? n 0))
-(define (positive? n) (< 0 n))
-(define (negative? n) (< n 0))
-(define (list & xs) xs)
-(define (complement f) (lambda (x) (not (f x))))
-(define (const x) (lambda (_) x))
-
-(define (%append2 a b)
-  (%if (null? a)
-       (lambda () b)
-       (lambda () (cons (car a) (%append2 (cdr a) b)))))
-
-(define (%append-all ls)
-  (%if (null? ls)
-       (lambda () '())
-       (lambda ()
-         (%if (null? (cdr ls))
-              (lambda () (car ls))
-              (lambda () (%append2 (car ls) (%append-all (cdr ls))))))))
-
-(define (append & ls) (%append-all ls))
-
-(define (%tagged? x tag)
-  (%if (atom? x)
-       (lambda () false)
-       (lambda () (eq? (car x) tag))))
-
-(define (%qq x)
-  (%if (atom? x)
-       (lambda () (list 'quote x))
-       (lambda ()
-         (%if (%tagged? x 'unquote)
-              (lambda () (cadr x))
-              (lambda ()
-                (%if (%tagged? (car x) 'unquote-splicing)
-                     (lambda () (list 'append (cadr (car x)) (%qq (cdr x))))
-                     (lambda () (list 'cons (%qq (car x)) (%qq (cdr x))))))))))
-
-(defmacro quasiquote (x) (%qq x))
-
-(defmacro if (c a b)
-  `((,c (lambda () ,a) (lambda () ,b))))
-
-(define (%rev-onto l acc)
-  (if (null? l) acc (%rev-onto (cdr l) (cons (car l) acc))))
-
-(define (reverse l) (%rev-onto l '()))
-
-(define (%append2 a b) (%rev-onto (reverse a) b))
-
-(define (%map f l acc)
-  (if (null? l) (reverse acc) (%map f (cdr l) (cons (f (car l)) acc))))
-
-(define (map f l) (%map f l '()))
-
-(define (foldl f acc l)
-  (if (null? l) acc (foldl f (f acc (car l)) (cdr l))))
-
-(define (foldr f init l)
-  (foldl (lambda (acc x) (f x acc)) init (reverse l)))
-
-(define (reduce f l) (foldl f (car l) (cdr l)))
-
-(defmacro begin body
-  (if (null? body) ''()
-      (if (null? (cdr body)) (car body)
-          ((lambda (g)
-             `((lambda (,g) (begin ,@(cdr body))) ,(car body)))
-           (gensym)))))
-
-(defmacro and args
-  (if (null? args) 'true
-      (if (null? (cdr args)) (car args)
-          `(if ,(car args) (and ,@(cdr args)) false))))
-
-(defmacro or args
-  (if (null? args) 'false
-      (if (null? (cdr args)) (car args)
-          ((lambda (g)
-             `((lambda (,g) (if ,g ,g (or ,@(cdr args)))) ,(car args)))
-           (gensym)))))
-
-(defmacro when (test & body) `(if ,test (begin ,@body) '()))
-(defmacro unless (test & body) `(if ,test '() (begin ,@body)))
-
-(defmacro cond clauses
-  (if (null? clauses) ''()
-      (if (eq? (caar clauses) 'else)
-          `(begin ,@(cdar clauses))
-          `(if ,(caar clauses)
-               (begin ,@(cdar clauses))
-               (cond ,@(cdr clauses))))))
-
-(define (memq x l)
-  (cond ((null? l) false) ((eq? x (car l)) true) (else (memq x (cdr l)))))
-
-(define (%case-clause g c)
-  (if (eq? (car c) 'else)
-      c
-      `((memq ,g ',(car c)) ,@(cdr c))))
-
-(defmacro case (key & clauses)
-  ((lambda (g)
-     `((lambda (,g) (cond ,@(map (lambda (c) (%case-clause g c)) clauses))) ,key))
-   (gensym)))
-
-(define (%letrec1 name lam rest)
-  ((lambda (self mk)
-     `((lambda (,name) ,rest)
-       ((lambda (,mk) (,mk ,mk))
-        (lambda (,self)
-          (lambda ,(cadr lam)
-            ((lambda (,name) ,@(cddr lam))
-             (lambda ,(cadr lam) ((,self ,self) ,@(cadr lam)))))))))
-   (gensym) (gensym)))
-
-(defmacro letrec (bindings & body)
-  (if (null? bindings)
-      `(begin ,@body)
-      (%letrec1 (caar bindings)
-                (cadr (car bindings))
-                `(letrec ,(cdr bindings) ,@body))))
-
-(defmacro let (first & rest)
-  (if (and (atom? first) (not (null? first)))
-      `(letrec ((,first (lambda ,(map car (car rest)) (begin ,@(cdr rest)))))
-         (,first ,@(map cadr (car rest))))
-      `((lambda ,(map car first) (begin ,@rest)) ,@(map cadr first))))
-
-(defmacro let* (bindings & body)
-  (if (null? bindings)
-      `(begin ,@body)
-      `(let (,(car bindings)) (let* ,(cdr bindings) ,@body))))
-
-(defmacro assert (test)
-  `(if ,test true (error 'assertion-failed ',test)))
-
-(define (> a b) (< b a))
-(define (<= a b) (not (< b a)))
-(define (>= a b) (not (< a b)))
-(define (= a b) (eq? a b))
-
-(define (abs n) (if (< n 0) (neg n) n))
-(define (even? n) (zero? (remainder n 2)))
-(define (odd? n) (not (even? n)))
-
-(define (%mul-loop acc a n)
-  (if (zero? n) acc (%mul-loop (%add acc a) a (dec n))))
-
-(define (%mul-signed a n)
-  (if (negative? n)
-      (neg (%mul-loop 0 a (neg n)))
-      (%mul-loop 0 a n)))
-
-(define (%mul a b)
-  (if (< (abs b) (abs a)) (%mul-signed a b) (%mul-signed b a)))
-
-(define (+ & xs)
-  (if (null? xs) 0 (foldl %add (car xs) (cdr xs))))
-
-(define (* & xs)
-  (if (null? xs) 1 (foldl %mul (car xs) (cdr xs))))
-
-(define (max x & xs) (foldl (lambda (a b) (if (< a b) b a)) x xs))
-(define (min x & xs) (foldl (lambda (a b) (if (< b a) b a)) x xs))
-
-(define (sum l) (foldl %add 0 l))
-(define (product l) (foldl %mul 1 l))
-
-(define (%udivmod a b)
-  (if (< a b)
-      (cons 0 a)
-      (let ((qr (%udivmod a (%add b b))))
-        (let ((q (%add (car qr) (car qr))) (r (cdr qr)))
-          (if (< r b) (cons q r) (cons (inc q) (- r b)))))))
-
-(define (%xor a b) (if a (not b) b))
-
-(define (quotient a b)
-  (if (zero? b)
-      0
-      (let ((q (car (%udivmod (abs a) (abs b)))))
-        (if (%xor (negative? a) (negative? b)) (neg q) q))))
-
-(define (remainder a b)
-  (if (zero? b)
-      a
-      (let ((r (cdr (%udivmod (abs a) (abs b)))))
-        (if (negative? a) (neg r) r))))
-
-(define (/ a b) (quotient a b))
-
-(define (list? x)
-  (cond ((null? x) true)
-        ((atom? x) false)
-        (else (list? (cdr x)))))
-
-(define (nth l n) (if (zero? n) (car l) (nth (cdr l) (dec n))))
-(define (last l) (if (null? (cdr l)) (car l) (last (cdr l))))
-
-(define (%length l n) (if (null? l) n (%length (cdr l) (inc n))))
-(define (length l) (%length l 0))
-
-(define (%take l n acc)
-  (if (or (zero? n) (null? l))
-      (reverse acc)
-      (%take (cdr l) (dec n) (cons (car l) acc))))
-
-(define (take l n) (%take l n '()))
-
-(define (drop l n)
-  (if (or (zero? n) (null? l)) l (drop (cdr l) (dec n))))
-
-(define (%range a b acc)
-  (if (< a b) (%range a (dec b) (cons (dec b) acc)) acc))
-
-(define (range a b) (%range a b '()))
-(define (repeat x n) (map (const x) (range 0 n)))
-
-(define (%map2 f a b acc)
-  (if (or (null? a) (null? b))
-      (reverse acc)
-      (%map2 f (cdr a) (cdr b) (cons (f (car a) (car b)) acc))))
-
-(define (map2 f a b) (%map2 f a b '()))
-
-(define (for-each f l)
-  (if (null? l) '() (begin (f (car l)) (for-each f (cdr l)))))
-
-(define (%filter f l acc)
-  (cond ((null? l) (reverse acc))
-        ((f (car l)) (%filter f (cdr l) (cons (car l) acc)))
-        (else (%filter f (cdr l) acc))))
-
-(define (filter f l) (%filter f l '()))
-(define (remove f l) (filter (complement f) l))
-
-(define (%count f l n)
-  (cond ((null? l) n)
-        ((f (car l)) (%count f (cdr l) (inc n)))
-        (else (%count f (cdr l) n))))
-
-(define (count f l) (%count f l 0))
-
-(define (any f l)
-  (cond ((null? l) false) ((f (car l)) true) (else (any f (cdr l)))))
-
-(define (all f l)
-  (cond ((null? l) true) ((f (car l)) (all f (cdr l))) (else false)))
-
-(define (find f l)
-  (cond ((null? l) false) ((f (car l)) (car l)) (else (find f (cdr l)))))
-
-(define (equal? a b)
-  (if (atom? a)
-      (eq? a b)
-      (and (pair? b)
-           (equal? (car a) (car b))
-           (equal? (cdr a) (cdr b)))))
-
-(define (member x l)
-  (cond ((null? l) false) ((equal? x (car l)) true) (else (member x (cdr l)))))
-
-(define (assq k al)
-  (cond ((null? al) false) ((eq? k (caar al)) (car al)) (else (assq k (cdr al)))))
-
-(define (assoc k al)
-  (cond ((null? al) false) ((equal? k (caar al)) (car al)) (else (assoc k (cdr al)))))
-
-(define (%unique l acc)
-  (cond ((null? l) (reverse acc))
-        ((member (car l) acc) (%unique (cdr l) acc))
-        (else (%unique (cdr l) (cons (car l) acc)))))
-
-(define (unique l) (%unique l '()))
-
-(define (flatten x)
-  (cond ((null? x) '())
-        ((atom? x) (list x))
-        (else (append (flatten (car x)) (flatten (cdr x))))))
-
-(define (%zip a b acc)
-  (if (or (null? a) (null? b))
-      (reverse acc)
-      (%zip (cdr a) (cdr b) (cons (list (car a) (car b)) acc))))
-
-(define (zip a b) (%zip a b '()))
-
-(define (%merge a b less? acc)
-  (cond ((null? a) (%rev-onto acc b))
-        ((null? b) (%rev-onto acc a))
-        ((less? (car b) (car a)) (%merge a (cdr b) less? (cons (car b) acc)))
-        (else (%merge (cdr a) b less? (cons (car a) acc)))))
-
-(define (sort l less?)
-  (if (or (null? l) (null? (cdr l)))
-      l
-      (let ((half (quotient (length l) 2)))
-        (%merge (sort (take l half) less?)
-                (sort (drop l half) less?)
-                less?
-                '()))))
+(define list (lambda (& xs) xs))
+
+(define identity (lambda (x) x))
+(define not (lambda (x) (if x '() 't)))
+(define null? (lambda (x) (eq? x '())))
+
+(define car (lambda (xs) (uncons xs (lambda (h t) h))))
+(define cdr (lambda (xs) (uncons xs (lambda (h t) t))))
+
+(define caar (lambda (x) (car (car x))))
+(define cadr (lambda (x) (car (cdr x))))
+(define cdar (lambda (x) (cdr (car x))))
+(define cddr (lambda (x) (cdr (cdr x))))
+(define caddr (lambda (x) (car (cddr x))))
+
+(defmacro and (& xs)
+  (if (null? xs)
+      't
+      (if (null? (cdr xs))
+          (car xs)
+          (list 'if (car xs) (cons 'and (cdr xs)) '()))))
+
+(defmacro or (& xs)
+  (if (null? xs)
+      '()
+      (list (list 'lambda
+                  (list '%or-tmp)
+                  (list 'if '%or-tmp '%or-tmp (cons 'or (cdr xs))))
+            (car xs))))
+
+(defmacro cond (& clauses)
+  (if (null? clauses)
+      '()
+      (list 'if
+            (caar clauses)
+            (cadr (car clauses))
+            (cons 'cond (cdr clauses)))))
+
+(define + (lambda (a b) (- a (- 0 b))))
+(define > (lambda (a b) (< b a)))
+(define <= (lambda (a b) (not (< b a))))
+(define >= (lambda (a b) (not (< a b))))
+(define = (lambda (a b) (and (<= a b) (>= a b))))
+
+(define abs (lambda (x) (if (< x 0) (- 0 x) x)))
+(define min (lambda (a b) (if (< a b) a b)))
+(define max (lambda (a b) (if (> a b) a b)))
+
+(define map
+  (lambda (f xs)
+    (if (null? xs)
+        '()
+        (cons (f (car xs)) (map f (cdr xs))))))
+
+(defmacro let (bindings & body)
+  (cons (list 'lambda (map car bindings) (car body))
+        (map cadr bindings)))
+
+(define fold-left
+  (lambda (f acc xs)
+    (if (null? xs)
+        acc
+        (fold-left f (f acc (car xs)) (cdr xs)))))
+
+(define fold-right
+  (lambda (f acc xs)
+    (if (null? xs)
+        acc
+        (f (car xs) (fold-right f acc (cdr xs))))))
+
+(define length
+  (lambda (xs)
+    (if (null? xs) 0 (+ 1 (length (cdr xs))))))
+
+(define append
+  (lambda (a b)
+    (if (null? a) b (cons (car a) (append (cdr a) b)))))
+
+(define reverse
+  (lambda (xs)
+    (fold-left (lambda (acc x) (cons x acc)) '() xs)))
+
+(define filter
+  (lambda (pred xs)
+    (cond ((null? xs) '())
+          ((pred (car xs)) (cons (car xs) (filter pred (cdr xs))))
+          ('t (filter pred (cdr xs))))))
+
+(define nth
+  (lambda (n xs)
+    (if (= n 0) (car xs) (nth (- n 1) (cdr xs)))))
+
+(define range
+  (lambda (lo hi)
+    (if (>= lo hi) '() (cons lo (range (+ lo 1) hi)))))
+
+(define member
+  (lambda (x xs)
+    (cond ((null? xs) '())
+          ((eq? x (car xs)) xs)
+          ('t (member x (cdr xs))))))
+
+(define assoc
+  (lambda (k alist)
+    (cond ((null? alist) '())
+          ((eq? k (caar alist)) (car alist))
+          ('t (assoc k (cdr alist))))))
+
+(define any
+  (lambda (pred xs)
+    (cond ((null? xs) '())
+          ((pred (car xs)) 't)
+          ('t (any pred (cdr xs))))))
+
+(define all
+  (lambda (pred xs)
+    (cond ((null? xs) 't)
+          ((pred (car xs)) (all pred (cdr xs)))
+          ('t '()))))
+
+(define compose
+  (lambda (f g) (lambda (x) (f (g x)))))
+
+(define sum (lambda (xs) (fold-left + 0 xs)))
+(define product (lambda (xs) (fold-left * 1 xs)))

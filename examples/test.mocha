@@ -1,2 +1,1 @@
-(define x 1e20)
-(define y 1e-20)
+(map (lambda (x) (* x x)) (range 0 5))

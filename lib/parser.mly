@@ -11,7 +11,7 @@ let wrap tag x = Cons (Sym tag, Cons (x, Nil))
 %token Eof
 
 %start program
-%type <Ast.sexp list> program
+%type <Ast.exp list> program
 
 %%
 
@@ -25,6 +25,7 @@ sexp:
     | Symbol { Sym $1 }
     | Quote sexp { wrap "quote" $2 }
     | LeftParen RightParen { Nil }
+    | LeftParen Rest sexp RightParen { $3 }
     | LeftParen sexp tail { Cons ($2, $3) }
 
 tail:
