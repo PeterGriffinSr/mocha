@@ -1,2 +1,8 @@
 (library
- (name mocha))
+ (name mocha)
+ (preprocess
+  (pps ppx_deriving.show)))
+
+(ocamllex lexer)
+
+(ocamlyacc parser)

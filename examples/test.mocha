@@ -1,0 +1,2 @@
+(define x 1e20)
+(define y 1e-20)
