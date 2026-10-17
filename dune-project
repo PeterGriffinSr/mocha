@@ -19,7 +19,7 @@
  (name mocha)
  (synopsis "Yet another lisp dialect.")
  (description "Yet another lisp dialect.")
- (depends ocaml)
+ (depends ocaml dune ppx_deriving)
  (tags
   (lisp compiler interpreter)))
 

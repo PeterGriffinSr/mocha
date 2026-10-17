@@ -10,8 +10,9 @@ homepage: "https://github.com/PeterGriffinSr/mocha"
 doc: "https://mocha.<domain>/docs"
 bug-reports: "https://github.com/PeterGriffinSr/mocha/issues"
 depends: [
-  "dune" {>= "3.22"}
   "ocaml"
+  "dune" {>= "3.22"}
+  "ppx_deriving"
   "odoc" {with-doc}
 ]
 build: [
