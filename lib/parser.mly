@@ -1,7 +1,7 @@
 %{
 open Ast
 
-let wrap tag x = Cons (Sym tag, Cons (x, Nil))
+let wrap tag x = cons (Sym tag) (cons x nil)
 %}
 
 %token LeftParen RightParen Rest
@@ -24,12 +24,12 @@ sexp:
     | Float { Float $1 }
     | Symbol { Sym $1 }
     | Quote sexp { wrap "quote" $2 }
-    | LeftParen RightParen { Nil }
+    | LeftParen RightParen { nil }
     | LeftParen Rest sexp RightParen { $3 }
-    | LeftParen sexp tail { Cons ($2, $3) }
+    | LeftParen sexp tail { cons $2 $3 }
 
 tail:
-    | RightParen { Nil }
+    | RightParen { nil }
     | Rest sexp RightParen { $2 }
-    | sexp tail { Cons ($1, $2) }
+    | sexp tail { cons $1 $2 }
     ;

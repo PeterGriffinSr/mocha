@@ -1,11 +1,11 @@
 (define list (lambda (& xs) xs))
-
 (define identity (lambda (x) x))
-(define not (lambda (x) (if x '() 't)))
 (define null? (lambda (x) (eq? x '())))
+(define not null?)
+(define = eq?)
 
-(define car (lambda (xs) (uncons xs (lambda (h t) h))))
-(define cdr (lambda (xs) (uncons xs (lambda (h t) t))))
+(define car (lambda (xs) (data-ref xs 0)))
+(define cdr (lambda (xs) (data-ref xs 1)))
 
 (define caar (lambda (x) (car (car x))))
 (define cadr (lambda (x) (car (cdr x))))
@@ -36,11 +36,9 @@
             (cadr (car clauses))
             (cons 'cond (cdr clauses)))))
 
-(define + (lambda (a b) (- a (- 0 b))))
 (define > (lambda (a b) (< b a)))
 (define <= (lambda (a b) (not (< b a))))
 (define >= (lambda (a b) (not (< a b))))
-(define = (lambda (a b) (and (<= a b) (>= a b))))
 
 (define abs (lambda (x) (if (< x 0) (- 0 x) x)))
 (define min (lambda (a b) (if (< a b) a b)))
@@ -84,7 +82,7 @@
   (lambda (pred xs)
     (cond ((null? xs) '())
           ((pred (car xs)) (cons (car xs) (filter pred (cdr xs))))
-          ('t (filter pred (cdr xs))))))
+          (else (filter pred (cdr xs))))))
 
 (define nth
   (lambda (n xs)
@@ -98,25 +96,25 @@
   (lambda (x xs)
     (cond ((null? xs) '())
           ((eq? x (car xs)) xs)
-          ('t (member x (cdr xs))))))
+          (else (member x (cdr xs))))))
 
 (define assoc
   (lambda (k alist)
     (cond ((null? alist) '())
           ((eq? k (caar alist)) (car alist))
-          ('t (assoc k (cdr alist))))))
+          (else (assoc k (cdr alist))))))
 
 (define any
   (lambda (pred xs)
     (cond ((null? xs) '())
           ((pred (car xs)) 't)
-          ('t (any pred (cdr xs))))))
+          (else (any pred (cdr xs))))))
 
 (define all
   (lambda (pred xs)
     (cond ((null? xs) 't)
           ((pred (car xs)) (all pred (cdr xs)))
-          ('t '()))))
+          (else '()))))
 
 (define compose
   (lambda (f g) (lambda (x) (f (g x)))))
