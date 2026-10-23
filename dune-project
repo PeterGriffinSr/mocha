@@ -1,5 +1,7 @@
 (lang dune 3.22)
 
+(using menhir 3.0)
+
 (name mocha)
 
 (generate_opam_files true)
@@ -19,7 +21,7 @@
  (name mocha)
  (synopsis "Yet another lisp dialect.")
  (description "Yet another lisp dialect.")
- (depends ocaml dune ppx_deriving ppx_sexp_conv sexplib)
+ (depends ocaml dune ppx_deriving zarith)
  (tags
   (lisp compiler interpreter)))
 

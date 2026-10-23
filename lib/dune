@@ -1,9 +1,10 @@
 (library
  (name mocha)
- (libraries sexplib)
+ (libraries zarith)
  (preprocess
-  (pps ppx_deriving.show ppx_deriving.eq ppx_sexp_conv)))
+  (pps ppx_deriving.show ppx_deriving.eq)))
 
 (ocamllex lexer)
 
-(ocamlyacc parser)
+(menhir
+ (modules parser))

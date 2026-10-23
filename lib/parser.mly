@@ -1,14 +1,10 @@
 %{
-open Ast
-
-let wrap tag x = cons (Sym tag) (cons x nil)
+    open Ast
 %}
 
-%token LeftParen RightParen Rest
-%token Quote
-%token <float> Float
+%token LeftParen RightParen Quote Eof
+%token <Z.t> Int
 %token <string> Symbol
-%token Eof
 
 %start program
 %type <Ast.exp list> program
@@ -16,20 +12,10 @@ let wrap tag x = cons (Sym tag) (cons x nil)
 %%
 
 program:
-    | Eof { [] }
-    | sexp program { $1 :: $2 }
-    ;
+    es = sexp* Eof { es }
 
 sexp:
-    | Float { Float $1 }
-    | Symbol { Sym $1 }
-    | Quote sexp { wrap "quote" $2 }
-    | LeftParen RightParen { nil }
-    | LeftParen Rest sexp RightParen { $3 }
-    | LeftParen sexp tail { cons $2 $3 }
-
-tail:
-    | RightParen { nil }
-    | Rest sexp RightParen { $2 }
-    | sexp tail { cons $1 $2 }
-    ;
+    | n = Int { Int n }
+    | s = Symbol { Sym s }
+    | Quote e = sexp { List [ Sym "quote"; e ] }
+    | LeftParen es = sexp* RightParen { List es }
